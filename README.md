@@ -17,6 +17,6 @@ Create an employee with the following properties:
 
 Whenever an employee is created, updated or deleted, an event related to this action must be pushed in some message broker (i.e, Kafka, RabbitMq, etc). This event will be listened to by the event-service.
 
-####Restrictions
+#### Restrictions
 
 The email field is unique, i.e. 2 employees cannot have the same email.
