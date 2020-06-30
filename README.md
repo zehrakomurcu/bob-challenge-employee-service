@@ -16,7 +16,7 @@ As its name suggests, this service is responsible for handling the employees of 
   - Update an employee
   - Delete an employee
 
-Whenever an employee is created, updated or deleted, an event related to this action must be pushed in some message broker (i.e, Kafka, RabbitMq, etc). This event will be listened to by the event-service.
+Whenever an employee is created, updated or deleted, an event related to this action must be pushed in some message broker (i.e, Kafka, RabbitMq, etc). This event will be listened to by the `event-service`.
 
 #### Restrictions
 
