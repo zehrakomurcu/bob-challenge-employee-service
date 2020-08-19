@@ -1,4 +1,3 @@
-/*
 package com.takeaway.challenge;
 
 import com.takeaway.challenge.controller.EmployeeController;
@@ -18,6 +17,7 @@ import org.springframework.test.web.servlet.MockMvc;
 
 import java.text.ParseException;
 import java.text.SimpleDateFormat;
+import java.util.Optional;
 import java.util.UUID;
 
 import static org.hamcrest.CoreMatchers.is;
@@ -57,10 +57,10 @@ public class EmployeeControllerTest {
 
     @Test
     public void shouldCreateEmployee() throws Exception {
-        String name = "Test User";
-        String email = "test@email";
-        String birthday = "1991-06-26";
-        String department = "Engineering";
+        Optional<String> name = Optional.of("Test User");
+        Optional<String> email = Optional.of("test@email");
+        Optional<String> birthday = Optional.of("1991-06-26");
+        Optional<String> department = Optional.of("Engineering");
         EmployeeRequestBody request = new EmployeeRequestBody(name, email, birthday, department);
         given(employeeService.createEmployee(request)).willReturn(mockEmployeeEntity(UUID.randomUUID()));
 
@@ -95,4 +95,4 @@ public class EmployeeControllerTest {
 
 }
 
-*/
+

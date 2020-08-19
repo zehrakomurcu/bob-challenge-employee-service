@@ -2,12 +2,14 @@ package com.takeaway.challenge.service;
 
 import com.takeaway.challenge.EmployeeNotFoundException;
 import com.takeaway.challenge.dto.EmployeeRequestBody;
+import com.takeaway.challenge.kafka.producer.EmployeeEvent;
 import com.takeaway.challenge.model.Department;
 import com.takeaway.challenge.model.Employee;
 import com.takeaway.challenge.repository.DepartmentRepository;
 import com.takeaway.challenge.repository.EmployeeRepository;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 
 import java.text.ParseException;
 import java.util.Optional;
@@ -22,8 +24,17 @@ public class EmployeeService {
     @Autowired
     DepartmentRepository departmentRepository;
 
+    @Autowired
+    EmployeeProducerService employeeProducerService;
+
+    @Transactional
     public Employee createEmployee(EmployeeRequestBody employeeRequest) throws ParseException {
-        return repository.save(convertDtoToEntity(employeeRequest));
+        Employee entity = convertDtoToEntity(employeeRequest);
+
+        repository.save(entity);
+        sendEmployeeEvent(EmployeeEvent.EventType.EMPLOYEE_CREATED, entity.getId().toString());
+
+        return entity;
     }
 
     public Employee updateEmployee(UUID id, EmployeeRequestBody request) throws ParseException {
@@ -33,11 +44,15 @@ public class EmployeeService {
         {
             Employee newEntity = employee.get();
             if(request.getName().isPresent()) { newEntity.setFullName(request.getName().get()); }
+            if(request.getEmail().isPresent()) { newEntity.setFullName(request.getEmail().get()); }
             if(request.getDepartment().isPresent()) { newEntity.setDepartment(setDepartmentConverted(request.getDepartment().get())); }
             if(request.getBirthday().isPresent()) { newEntity.setBirthday(request.getBirthdayDateConverted()); }
 
-            return repository.save(newEntity);
+            Employee updatedEntity = repository.save(newEntity);
 
+            sendEmployeeEvent(EmployeeEvent.EventType.EMPLOYEE_UPDATED, updatedEntity.getId().toString());
+
+            return updatedEntity;
         } else {
             throw new EmployeeNotFoundException();
         }
@@ -59,6 +74,8 @@ public class EmployeeService {
 
         if (employee.isPresent()) {
             repository.deleteById(id);
+
+            sendEmployeeEvent(EmployeeEvent.EventType.EMPLOYEE_DELETED, id.toString());
         } else {
             throw new EmployeeNotFoundException();
         }
@@ -85,4 +102,7 @@ public class EmployeeService {
         }
     }
 
+    private void sendEmployeeEvent(EmployeeEvent.EventType eventType, String sourceId) {
+        employeeProducerService.sendMessage(new EmployeeEvent(eventType, sourceId));
+    }
 }
