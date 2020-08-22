@@ -2,6 +2,7 @@ package com.takeaway.challenge.service;
 
 import com.takeaway.challenge.EmployeeNotFoundException;
 import com.takeaway.challenge.dto.EmployeeRequestBody;
+import com.takeaway.challenge.kafka.producer.EmployeeData;
 import com.takeaway.challenge.kafka.producer.EmployeeEvent;
 import com.takeaway.challenge.model.Department;
 import com.takeaway.challenge.model.Employee;
@@ -32,7 +33,7 @@ public class EmployeeService {
         Employee entity = convertDtoToEntity(employeeRequest);
 
         repository.save(entity);
-        sendEmployeeEvent(EmployeeEvent.EventType.EMPLOYEE_CREATED, entity.getId().toString());
+        sendEmployeeEvent(EmployeeEvent.EventType.EMPLOYEE_CREATED, entity);
 
         return entity;
     }
@@ -50,7 +51,7 @@ public class EmployeeService {
 
             Employee updatedEntity = repository.save(newEntity);
 
-            sendEmployeeEvent(EmployeeEvent.EventType.EMPLOYEE_UPDATED, updatedEntity.getId().toString());
+            sendEmployeeEvent(EmployeeEvent.EventType.EMPLOYEE_UPDATED, updatedEntity);
 
             return updatedEntity;
         } else {
@@ -75,7 +76,7 @@ public class EmployeeService {
         if (employee.isPresent()) {
             repository.deleteById(id);
 
-            sendEmployeeEvent(EmployeeEvent.EventType.EMPLOYEE_DELETED, id.toString());
+            sendEmployeeEvent(EmployeeEvent.EventType.EMPLOYEE_DELETED, employee.get());
         } else {
             throw new EmployeeNotFoundException();
         }
@@ -102,7 +103,14 @@ public class EmployeeService {
         }
     }
 
-    private void sendEmployeeEvent(EmployeeEvent.EventType eventType, String sourceId) {
-        employeeProducerService.sendMessage(new EmployeeEvent(eventType, sourceId));
+    private void sendEmployeeEvent(EmployeeEvent.EventType eventType, Employee entity) {
+        EmployeeData data = new EmployeeData(
+                entity.getFullName(),
+                entity.getBirthday(),
+                entity.getEmail(),
+                entity.getDepartment().getName());
+        EmployeeEvent event = new EmployeeEvent(eventType, entity.getId().toString(), data);
+
+        employeeProducerService.sendMessage(event);
     }
 }
