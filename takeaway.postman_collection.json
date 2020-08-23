@@ -1,0 +1,93 @@
+{
+	"variables": [],
+	"info": {
+		"name": "takeaway",
+		"_postman_id": "e89b57c5-283f-58ba-0e5a-b606053052d7",
+		"description": "",
+		"schema": "https://schema.getpostman.com/json/collection/v2.0.0/collection.json"
+	},
+	"item": [
+		{
+			"name": "Create Department",
+			"request": {
+				"url": "localhost:8080/employees/department",
+				"method": "POST",
+				"header": [
+					{
+						"key": "Content-Type",
+						"value": "application/json",
+						"description": ""
+					}
+				],
+				"body": {
+					"mode": "raw",
+					"raw": "{\n\"name\":\"Engineering\"\n}"
+				},
+				"description": ""
+			},
+			"response": []
+		},
+		{
+			"name": "Create Employee",
+			"request": {
+				"url": "localhost:8080/employees",
+				"method": "POST",
+				"header": [
+					{
+						"key": "Content-Type",
+						"value": "application/json",
+						"description": ""
+					}
+				],
+				"body": {
+					"mode": "raw",
+					"raw": "{\n\t\"name\": \"Zehra Komurcu\",\n\t\"email\": \"zehra@test.com\",\n\t\"birthday\": \"1992-07-03\",\n\t\"department\": \"Engineering\"\n}"
+				},
+				"description": ""
+			},
+			"response": []
+		},
+		{
+			"name": "Get Employee by id",
+			"request": {
+				"url": "localhost:8080/employees/68951edf-39df-47c9-809b-b9bc9cf7a75f",
+				"method": "GET",
+				"header": [],
+				"body": {},
+				"description": ""
+			},
+			"response": []
+		},
+		{
+			"name": "Update Employee",
+			"request": {
+				"url": "localhost:8080/employees/68951edf-39df-47c9-809b-b9bc9cf7a75f",
+				"method": "PUT",
+				"header": [
+					{
+						"key": "Content-Type",
+						"value": "application/json",
+						"description": ""
+					}
+				],
+				"body": {
+					"mode": "raw",
+					"raw": "{\n    \"name\": \"Update name\",\n    \"email\": \"updated@email.com\"\n}"
+				},
+				"description": ""
+			},
+			"response": []
+		},
+		{
+			"name": "DeleteEmployee",
+			"request": {
+				"url": "localhost:8080/employees/68951edf-39df-47c9-809b-b9bc9cf7a75f",
+				"method": "DELETE",
+				"header": [],
+				"body": {},
+				"description": ""
+			},
+			"response": []
+		}
+	]
+}
