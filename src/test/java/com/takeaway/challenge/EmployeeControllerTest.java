@@ -1,5 +1,6 @@
 package com.takeaway.challenge;
 
+import com.fasterxml.jackson.databind.ObjectMapper;
 import com.takeaway.challenge.controller.EmployeeController;
 import com.takeaway.challenge.dto.EmployeeRequestBody;
 import com.takeaway.challenge.model.Department;
@@ -9,33 +10,33 @@ import com.takeaway.challenge.service.EmployeeService;
 import org.junit.Test;
 import org.junit.runner.RunWith;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.boot.test.autoconfigure.web.servlet.AutoConfigureMockMvc;
 import org.springframework.boot.test.autoconfigure.web.servlet.WebMvcTest;
+import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.boot.test.mock.mockito.MockBean;
 import org.springframework.http.MediaType;
 import org.springframework.test.context.junit4.SpringRunner;
 import org.springframework.test.web.servlet.MockMvc;
+import org.springframework.test.web.servlet.request.MockMvcRequestBuilders;
+import org.springframework.test.web.servlet.result.MockMvcResultMatchers;
 
 import java.text.ParseException;
-import java.text.SimpleDateFormat;
+import java.time.Instant;
+import java.util.Date;
 import java.util.Optional;
 import java.util.UUID;
 
-import static org.hamcrest.CoreMatchers.is;
-import static org.mockito.BDDMockito.given;
-import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
-import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
-import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
+import static org.mockito.Mockito.when;
+import static org.springframework.test.web.servlet.result.MockMvcResultHandlers.print;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
-
 @RunWith(SpringRunner.class)
-@WebMvcTest(EmployeeController.class)
+@SpringBootTest
+@AutoConfigureMockMvc
 public class EmployeeControllerTest {
 
-    private static final SimpleDateFormat dateFormat = new SimpleDateFormat("yyyy-MM-dd");
-
     @Autowired
-    private MockMvc mvc;
+    private MockMvc mockMvc;
 
     @MockBean
     private EmployeeService employeeService;
@@ -46,53 +47,115 @@ public class EmployeeControllerTest {
     @Test
     public void shouldCreateDepartment() throws Exception {
         //given
-        Department department = new Department(1L, "Engineering");
-        given(departmentRepository.save(department)).willReturn(department);
+        String departmentName = "Test Department";
+        Department department = new Department(departmentName);
+        Department savedEntity = new Department(1L, departmentName);
 
-        mvc.perform(post("/employees/department")
-                .contentType(MediaType.APPLICATION_JSON))
+        //when
+        when(departmentRepository.save(department)).thenReturn(savedEntity);
+
+        this.mockMvc.perform(MockMvcRequestBuilders
+                .post("/employees/department")
+                .content(asJsonString(department))
+                .contentType(MediaType.APPLICATION_JSON)
+                .accept(MediaType.APPLICATION_JSON))
                 .andExpect(status().isOk())
-                .andExpect(jsonPath("$[0].name", is(department.getName())));
+                .andExpect(MockMvcResultMatchers.jsonPath("$.id").exists());
     }
 
     @Test
     public void shouldCreateEmployee() throws Exception {
-        Optional<String> name = Optional.of("Test User");
-        Optional<String> email = Optional.of("test@email");
-        Optional<String> birthday = Optional.of("1991-06-26");
-        Optional<String> department = Optional.of("Engineering");
-        EmployeeRequestBody request = new EmployeeRequestBody(name, email, birthday, department);
-        given(employeeService.createEmployee(request)).willReturn(mockEmployeeEntity(UUID.randomUUID()));
+        //given
+        Optional<String> name = Optional.of("Test Name");
+        Optional<String> email = Optional.of("test@email.com");
+        Optional<String> birthday = Optional.of("2020-08-23");
+        Optional<String> departmentName = Optional.of("Test Department");
+        EmployeeRequestBody request = new EmployeeRequestBody(name, email, birthday,departmentName);
 
-        mvc.perform(post("/employees")
-                .contentType(MediaType.APPLICATION_JSON))
+        Department department = new Department(1L, departmentName.get());
+        Employee employee = new Employee(UUID.randomUUID(), name.get(), email.get(), request.getBirthdayDateConverted(), department);
+
+        //when
+        when(employeeService.createEmployee(request)).thenReturn(employee);
+
+        //then
+        this.mockMvc.perform(MockMvcRequestBuilders
+                .post("/employees")
+                .content("{\"name\":\"Test Name\", \"email\":\"test@email.com\", \"birthday\":\"2020-08-23\", \"department\":\"Test Department\"}")
+                .contentType(MediaType.APPLICATION_JSON)
+                .accept(MediaType.APPLICATION_JSON))
                 .andExpect(status().isOk())
-                .andExpect(jsonPath("$[0].name", is("Engineering")));
+                .andExpect(MockMvcResultMatchers.jsonPath("$.id").exists());
     }
 
     @Test
-    public void shouldGetEmployee() throws Exception {
-        UUID id = UUID.randomUUID();
-        given(employeeService.getEmployee(id)).willReturn(mockEmployeeEntity(id));
+    public void shouldGetEmployeeById() throws Exception {
+        //given
+        UUID employeeId = UUID.randomUUID();
+        String name = "Test Name";
+        String email = "test@email.com";
+        Date birthday = Date.from(Instant.now());
+        Department department = new Department(1L, "Test Department");
+        Employee employee = new Employee(employeeId, name , email , birthday, department);
 
-        mvc.perform(get("/employees")
-                .param(id.toString())
-                .contentType(MediaType.APPLICATION_JSON))
+        //when
+        when(employeeService.getEmployee(employeeId)).thenReturn(employee);
+
+        //then
+        this.mockMvc.perform( MockMvcRequestBuilders
+                .get("/employees/{id}", employeeId)
+                .accept(MediaType.APPLICATION_JSON))
+                .andDo(print())
                 .andExpect(status().isOk())
-                .andExpect(jsonPath("$[0].name", is("Engineering")));
-
+                .andExpect(MockMvcResultMatchers.jsonPath("$.id").value(employeeId.toString()))
+                .andExpect(MockMvcResultMatchers.jsonPath("$.fullName").value(name))
+                .andExpect(MockMvcResultMatchers.jsonPath("$.email").value(email))
+                .andExpect(MockMvcResultMatchers.jsonPath("$.department").value(department));
     }
 
-    private Employee mockEmployeeEntity(UUID id) throws ParseException {
-        String name = "Test User";
-        String email = "test@email";
-        String birthday = "1991-06-26";
-        String department = "Engineering";
+    @Test
+    public void shouldUpdateEmployee() throws Exception {
+        //given
+        UUID employeeId = UUID.randomUUID();
+        Optional<String> name = Optional.of("Test Name");
+        Optional<String> email = Optional.of("test@email.com");
+        Optional<String> birthday = Optional.of("2020-08-23");
+        Optional<String> departmentName = Optional.of("Test Department");
+        EmployeeRequestBody request = new EmployeeRequestBody(name, email, birthday,departmentName);
 
-        return new Employee(id, name, email, dateFormat.parse(birthday), new Department(1L, "Egineering"));
+        Department department = new Department(1L, departmentName.get());
+        Employee updatedEmployee = new Employee(employeeId, name.get(), email.get(), request.getBirthdayDateConverted(), department);
 
+        //when
+        when(employeeService.updateEmployee(employeeId, request)).thenReturn(updatedEmployee);
+
+        //then
+        this.mockMvc.perform( MockMvcRequestBuilders
+                .put("/employees/{id}", employeeId.toString())
+                .content("{\"name\":\"Test Name\", \"email\":\"test@email.com\", \"birthday\":\"2020-08-23\", \"department\":\"Test Department\"}")
+                .contentType(MediaType.APPLICATION_JSON)
+                .accept(MediaType.APPLICATION_JSON))
+                .andExpect(status().isOk())
+                .andExpect(MockMvcResultMatchers.jsonPath("$.id").value(employeeId.toString()))
+                .andExpect(MockMvcResultMatchers.jsonPath("$.fullName").value(updatedEmployee.getFullName()))
+                .andExpect(MockMvcResultMatchers.jsonPath("$.email").value(updatedEmployee.getEmail()))
+                .andExpect(MockMvcResultMatchers.jsonPath("$.department").value(updatedEmployee.getDepartment()));;
+    }
+
+    @Test
+    public void shouldDeleteEmployee() throws Exception {
+        UUID employeeId = UUID.randomUUID();
+        this.mockMvc.perform(MockMvcRequestBuilders
+                .delete("/employees/{id}", employeeId) )
+                .andExpect(status().isOk());
+    }
+
+    private static String asJsonString(final Object obj) {
+        try {
+            return new ObjectMapper().writeValueAsString(obj);
+        } catch (Exception e) {
+            throw new RuntimeException(e);
+        }
     }
 
 }
-
-
