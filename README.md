@@ -1,7 +1,3 @@
-# Project Description
-
-This project is implemented for **Takeaway** as an assignment project. It's a Spring Boot project which developed by using Java language.
-
 ## Build & Run
 
 This project uses Mysql as database server and Kafka as messaging queue. You can follow the next instructions to run the application.
